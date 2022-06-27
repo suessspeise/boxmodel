@@ -2,7 +2,29 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+class Value:
+    val = None
     
+    def __init__(self, value):
+        self.set(value)
+    def set(self, value):
+        self.val = value
+    def get(self):
+        return self.val
+    def add(self, value):
+        self.val += value
+    def mult(self, value):
+        self.val = self.val * value
+
+class FloatValue(Value):
+    def set(self, value):
+        self.val = float(value)
+
+class IntValue(Value):
+    def set(self, value):
+        self.val = int(value)
+        
+        
 class Registry:
     reg = None
 
@@ -25,12 +47,13 @@ class Registry:
                 self.reg[key] = var
 
     def get(self, key):
-        return self.reg[key][0] # regarding [0], see comment in BasicBox.__init__()
+        return self.reg[key].get()
+    
     def get_ref(self, key):
         return self.reg[key]
 
     def set(self, key, value):
-        self.reg[key][0] = value
+        self.reg[key] = Value(value)
 
     def keys(self):
         return list(self.reg.keys())
@@ -49,13 +72,7 @@ class BasicBox:
     def __init__(self, attributes):
         self.attr = dict()
         for key, value in attributes.items():
-            # this is an ugly trick to circumvent Pythons naming system
-            # instead of referencing an inmutable e.g. integer or float
-            # we wrap the value in a mutable list, thus forcing python to not use an identical object
-            # see: https://realpython.com/pointers-in-python/
-            wrapped_val = list()
-            wrapped_val.append(value)
-            self.attr[key] = wrapped_val
+            self.attr[key] = FloatValue(value)
 
     def __str__(self):
         sep = ','
@@ -64,16 +81,16 @@ class BasicBox:
         return f"Box[{attributes[0:-len(sep)]}]"
 
     def get(self, key):
-        return self.attr[key][0] # regarding [0], see comment in BasicBox.__init__()
+        return self.attr[key].get()
 
     def set(self, key, value):
-        self.attr[key][0] = value # regarding [0], see comment in BasicBox.__init__()
+        self.attr[key].set(value)
 
     def add(self, key, value):
-        self.attr[key][0] += value # regarding [0], see comment in BasicBox.__init__()
+        self.attr[key].add(value)
 
     def substract(self, key, value):
-        self.attr[key][0] -= value # regarding [0], see comment in BasicBox.__init__()
+        self.attr[key].add( - value)
     def sub(self, key, value):
         self.substract(key, value)
 
@@ -88,14 +105,14 @@ class Delta(BasicBox):
     def __init__(self, original_box, time_step_length):
         self.attr = dict()
         for key in original_box.keys():
-            self.attr[key] = [0.0] # regarding [0.0], see comment in BasicBox.__init__()
+            self.attr[key] = Value(0.0)
             self.scaling_factor = time_step_length
 
     def scale(self, key, value):
-        self.attr[key][0] = self.attr[key][0] * value # regarding [0], see comment in BasicBox.__init__()
+        self.attr[key].mult(value) 
 
     def get_delta(self, key):
-        return self.attr[key][0] * self.scaling_factor # regarding [0], see comment in BasicBox.__init__()
+        return self.attr[key].get() * self.scaling_factor
 
 
 class Box(BasicBox):
@@ -125,7 +142,7 @@ class Box(BasicBox):
                 arg_names = self.processes[key]['arg_names']
                 args = list()
                 for a in arg_names:
-                    args.append(*a)
+                    args.append(a.get())
                 target    = self.processes[key]['target']
                 d = self.processes[key]['func'](*args)
                 if sign in ['-', 'minus', 'negative'] : d = d * -1
@@ -163,8 +180,8 @@ class BoxModel:
             if timestep: self.step_length = step_length
             if n_steps : self.n_steps_end = n_steps
         self.registry = Registry()
-        self.current_step = [0]
-        self.current_time = [0.0]
+        self.current_step = IntValue(0)
+        self.current_time = FloatValue(0)
         self.registry.register('step', self.current_step)
         self.registry.register('time', self.current_time)
         
@@ -194,13 +211,13 @@ class BoxModel:
         self.boxes[label] = box
         
     def get_step(self):
-        return self.current_step[0] # regarding [0], see comment in BasicBox.__init__()
+        return self.current_step.get() 
     def increment_step(self):
-        self.current_step[0] += 1 # regarding [0], see comment in BasicBox.__init__()
+        self.current_step.add(1)
     def get_time(self):
-        return self.current_time[0] # regarding [0], see comment in BasicBox.__init__()
+        return self.current_time.get()
     def update_time(self):
-        self.current_time[0] = self.get_step() * self.step_length # regarding [0], see comment in BasicBox.__init__()
+        self.current_time.set(self.get_step() * self.step_length)
         
     def do_step(self):
         # in case this is the first step: initialise output field:
