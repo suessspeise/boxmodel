@@ -68,8 +68,10 @@ class Registry:
 
 class BasicBox:
     attr = None
+    name = None
 
-    def __init__(self, attributes):
+    def __init__(self, attributes, name=None):
+        self.name = name
         self.attr = dict()
         for key, value in attributes.items():
             self.attr[key] = FloatValue(value)
@@ -160,6 +162,9 @@ class Box(BasicBox):
         for key in self.delta.keys():
             delta = self.delta.get(key) * self.delta.scaling_factor
             self.add(key, delta)
+            
+    def box(self, label):
+        return self.boxes[label]
 
 # class BoxModel:
 class BoxModel:
@@ -171,8 +176,9 @@ class BoxModel:
     boxes    = None
     registry = None
     output   = None
+    description = None
     
-    def __init__(self, step=None, step_length=None, n_steps=None,):
+    def __init__(self, step=None, step_length=None, n_steps=None, description=None):
         if step: 
             self.n_steps_end = step[0]
             self.step_length = step[1]
@@ -184,11 +190,12 @@ class BoxModel:
         self.current_time = FloatValue(0)
         self.registry.register('step', self.current_step)
         self.registry.register('time', self.current_time)
+        if description: self.description = description
         
     def add_box(self, label, attributes):
         if not self.boxes:
             self.boxes = dict()
-        self.boxes[label] = Box(attributes)
+        self.boxes[label] = Box(attributes,name=label)
         hashlist = list()
         for key, variable in self.boxes[label].attr.items():
             self.registry.register(f"{label}_{key}", variable)
@@ -241,9 +248,9 @@ class BoxModel:
             self.do_step()
         return self.output
                    
-    def plot(self, var=None, title=None, figsize=(15,10)):
-        fig, ax  = plt.subplots(figsize=figsize)
-        if title: fig.suptitle(title)
+    def plot(self, ax=None, var=None, title=None, figsize=(15,10)):
+        if not ax: fig, ax  = plt.subplots(figsize=figsize)
+        if title: ax.set_title(title)
         if not var:
             var = list(self.output.keys())
             var.remove('time')
@@ -254,5 +261,5 @@ class BoxModel:
             ax.plot(t,data,label=f"{v}\n(max:{np.max(data):.2f}; last: {data[-1]:.2f})")
         ax.legend()
         plt.show
-        return fig, ax
+        return ax
 
