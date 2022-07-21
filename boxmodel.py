@@ -178,12 +178,12 @@ class BoxModel:
     output   = None
     description = None
     
-    def __init__(self, step=None, step_length=None, n_steps=None, description=None, timestep=None):
+    def __init__(self, step=None, step_length=None, n_steps=None, description=None):
         if step: 
             self.n_steps_end = step[0]
             self.step_length = step[1]
         else:
-            if timestep: self.step_length = step_length
+            if step_length : self.step_length = step_length
             if n_steps : self.n_steps_end = n_steps
         self.registry = Registry()
         self.current_step = IntValue(0)
