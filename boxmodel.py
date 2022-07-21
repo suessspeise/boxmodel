@@ -178,7 +178,7 @@ class BoxModel:
     output   = None
     description = None
     
-    def __init__(self, step=None, step_length=None, n_steps=None, description=None):
+    def __init__(self, step=None, step_length=None, n_steps=None, description=None, timestep=None):
         if step: 
             self.n_steps_end = step[0]
             self.step_length = step[1]
